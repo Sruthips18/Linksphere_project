@@ -1,7 +1,9 @@
+from typing import Iterable, Optional
 from django.db import models
 from django.contrib.auth.models import User
 from datetime import datetime
 from django.db.models.signals import post_save
+from django.utils import timezone
 
 # Create your models here.
 class UserProfile(models.Model):
@@ -34,7 +36,6 @@ class Comments(models.Model):
     created_date=models.DateTimeField(auto_now_add=True)
     post=models.ForeignKey(Posts,related_name="post_comments",on_delete=models.CASCADE)
 
-
     def __str__(self):
         return self.text
     
@@ -44,15 +45,20 @@ class Stories(models.Model):
     title=models.CharField(max_length=200)
     post_image=models.ImageField(upload_to="stories",null=True,blank=True)
     created_date=models.DateTimeField(auto_now_add=True)
-    # exp=created_date + timezone.timedelta(days=1)
     expiry_date=models.DateTimeField()
-    
 
     def __str__(self):
         return self.title
     
+    def save(self,*args,**kwargs):
+        if not self.expiry_date:
+            self.expiry_date=timezone.now()+timezone.timedelta(days=1)
+            super().save(*args,**kwargs)
+
+
 def create_profile(sender,created,instance,**kwargs):
     if created:
         UserProfile.objects.create(user=instance)
+        print('profile object created')
 
 post_save.connect(create_profile,sender=User)
